@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Main entry point for the template package."""
+"""Main entry point for the back-to-back AI chat application."""
 
 import argparse
 import logging
 import sys
 from typing import Optional
+
+import uvicorn
 
 from . import __package_name__, __version__
 
@@ -32,7 +34,7 @@ def parse_args(args: Optional[list[str]] = None) -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         prog=__package_name__,
-        description="A template Python project",
+        description="Back-to-Back AI Chat API Server",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -51,17 +53,29 @@ def parse_args(args: Optional[list[str]] = None) -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "name",
-        nargs="?",
-        default="World",
-        help="Name to greet (default: World)",
+        "--host",
+        default="0.0.0.0",
+        help="Host to bind the server to (default: 0.0.0.0)",
+    )
+
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to bind the server to (default: 8000)",
+    )
+
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload for development",
     )
 
     return parser.parse_args(args)
 
 
 def main(args: Optional[list[str]] = None) -> int:
-    """Main entry point for the template command."""
+    """Main entry point for the back-to-back command."""
     try:
         parsed_args = parse_args(args)
         setup_logging(parsed_args.verbose)
@@ -69,11 +83,19 @@ def main(args: Optional[list[str]] = None) -> int:
         logger.debug("Starting %s v%s", __package_name__, __version__)
         logger.info("Verbose mode enabled") if parsed_args.verbose else None
 
-        # Main functionality
-        print(f"Hello, {parsed_args.name}!")
-        print(f"This is {__package_name__} v{__version__}")
+        # Start the FastAPI server
+        logger.info("Starting Back-to-Back AI Chat API server...")
+        logger.info("Server will be available at http://%s:%d", parsed_args.host, parsed_args.port)
+        logger.info("API documentation at http://%s:%d/docs", parsed_args.host, parsed_args.port)
 
-        logger.debug("Completed successfully")
+        uvicorn.run(
+            "back_to_back.app:app",
+            host=parsed_args.host,
+            port=parsed_args.port,
+            reload=parsed_args.reload,
+            log_level="info" if parsed_args.verbose else "warning",
+        )
+
         return 0
 
     except KeyboardInterrupt:
