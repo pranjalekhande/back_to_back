@@ -7,31 +7,27 @@ handling prompt entry, chat, and TTS audio per turn.
 
 ```mermaid
 sequenceDiagram
-    participant User as Human User (Web Browser)
-    participant FE as Frontend (React/Vue)
+    participant User as Human User
+    participant FE as Frontend
     participant API as FastAPI Backend
-    participant LLM as Language Model API (e.g. OpenAI GPT)
-    participant TTS as Text-to-Speech API (e.g. OpenAI/Google/AWS)
+    participant LLM as Language Model API
+    participant TTS as TTS API
 
-    Note over FE,User: 1. User sets up persona prompts ("Agent A" [AI] and optional "Agent B" [User or AI])
+    User->>FE: Input persona & scenario, click start
+    FE->>API: POST /init (user prompts, config)
+    API-->>FE: 200 OK (session id/config)
 
-    User->>FE: Enter persona & scenario, click start
-    FE->>API: POST /init (user prompts, AI/human config)
-    API-->>FE: 200 OK (session id, agent config)
+    %% Chat Turn Loop
+    User->>FE: Enter chat message (if human's turn)
+    FE->>API: POST /chat (message, session id, turn)
+    API->>LLM: Query AI (persona, context, phase)
+    LLM-->>API: AI text response
+    API->>TTS: Synthesize agent reply
+    TTS-->>API: Audio file (mp3/wav)
+    API-->>FE: Return {text, audio_url, speaker, turn}
+    FE->>User: Display chat line and play audio
 
-    loop Chat Turns
-        Note over User,API: Text entry alternates: Human  AI Agent
-        User->>FE: Enter chat message (if human's turn)
-        FE->>API: POST /chat (message, session id, turn)
-        API->>LLM: Query AI (with persona, chat context, phase)
-        LLM-->>API: AI text response
-        API->>TTS: Synthesize agent reply
-        TTS-->>API: Audio file (mp3/wav)
-        API-->>FE: {agent text, audio_url, speaker, turn, conversation}
-        FE->>User: Display chat line; play audio; update chat UI
-    end
-
-    Note over FE,User: 3. Repeat until 'Roast' phase, continue for n turns
+    %% Repeat turns for conversation
 ```
 
 **Stack Explanation and Component Breakdown**
