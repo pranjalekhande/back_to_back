@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Step 1: Basic Deepgram CDN Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .step { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .waiting { background: #fff3cd; border-color: #ffeaa7; }
+        .code { background: #f8f9fa; padding: 10px; border-radius: 3px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Step 1: Basic Deepgram SDK Test</h1>
+        <p>This test verifies the Deepgram SDK can be loaded and initialized.</p>
+        
+        <div id="step1" class="step waiting">
+            <h3>Step 1.1: Load Deepgram SDK from CDN</h3>
+            <p>Status: <span id="step1-status">Loading...</span></p>
+        </div>
+        
+        <div id="step2" class="step waiting">
+            <h3>Step 1.2: Initialize Deepgram Client</h3>
+            <p>Status: <span id="step2-status">Waiting...</span></p>
+        </div>
+        
+        <div id="step3" class="step waiting">
+            <h3>Step 1.3: Test Basic Connection</h3>
+            <p>Status: <span id="step3-status">Waiting...</span></p>
+            <div id="step3-details" class="code" style="display: none;"></div>
+        </div>
+        
+        <div id="console-output" class="step">
+            <h3>Console Output:</h3>
+            <div id="console-log" class="code" style="min-height: 200px; white-space: pre-wrap; overflow-y: auto;"></div>
+        </div>
+        
+        <div class="step">
+            <h3>Next Steps:</h3>
+            <p>If all tests pass, proceed to <a href="step2-microphone-test.html">Step 2: Microphone Test</a></p>
+        </div>
+    </div>
+
+    <!-- Load Deepgram SDK from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@deepgram/sdk"></script>
+    
+    <script>
+        // Console capture for debugging
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const consoleOutput = document.getElementById('console-log');
+        
+        function logToPage(type, ...args) {
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            consoleOutput.textContent += `[${timestamp}] ${type.toUpperCase()}: ${args.join(' ')}\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = (...args) => {
+            originalLog(...args);
+            logToPage('log', ...args);
+        };
+        
+        console.error = (...args) => {
+            originalError(...args);
+            logToPage('error', ...args);
+        };
+        
+        console.warn = (...args) => {
+            originalWarn(...args);
+            logToPage('warn', ...args);
+        };
+        
+        // Test functions
+        function updateStep(stepId, status, success, details = '') {
+            const step = document.getElementById(stepId);
+            const statusSpan = document.getElementById(`${stepId}-status`);
+            const detailsDiv = document.getElementById(`${stepId}-details`);
+            
+            statusSpan.textContent = status;
+            step.className = `step ${success ? 'success' : success === false ? 'error' : 'waiting'}`;
+            
+            if (details && detailsDiv) {
+                detailsDiv.textContent = details;
+                detailsDiv.style.display = 'block';
+            }
+        }
+        
+        async function runTests() {
+            console.log('🧪 Starting Step 1 Tests...');
+            
+            // Step 1.1: Check if Deepgram SDK loaded
+            console.log('Step 1.1: Checking Deepgram SDK...');
+            
+            if (typeof deepgram === 'undefined') {
+                updateStep('step1', 'FAILED - Deepgram SDK not loaded', false);
+                console.error('❌ Deepgram SDK not found. Check CDN link.');
+                return;
+            }
+            
+            console.log('✅ Deepgram SDK loaded successfully');
+            console.log('Available Deepgram object:', Object.keys(deepgram));
+            updateStep('step1', 'SUCCESS - SDK loaded', true);
+            
+            // Step 1.2: Initialize client
+            console.log('Step 1.2: Initializing Deepgram client...');
+            
+            try {
+                if (!deepgram.createClient) {
+                    throw new Error('createClient function not found in Deepgram SDK');
+                }
+                
+                // Use a dummy API key for initialization test
+                const testApiKey = 'test-key-for-initialization';
+                const client = deepgram.createClient(testApiKey);
+                
+                if (!client) {
+                    throw new Error('Client creation returned null/undefined');
+                }
+                
+                console.log('✅ Deepgram client created successfully');
+                console.log('Client object type:', typeof client);
+                console.log('Client methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(client)));
+                
+                updateStep('step2', 'SUCCESS - Client initialized', true);
+                
+                // Step 1.3: Test basic properties
+                console.log('Step 1.3: Testing client properties...');
+                
+                const hasListenProperty = 'listen' in client;
+                const hasManageProperty = 'manage' in client;
+                
+                console.log('Client has listen property:', hasListenProperty);
+                console.log('Client has manage property:', hasManageProperty);
+                
+                if (hasListenProperty) {
+                    console.log('Listen object type:', typeof client.listen);
+                    if (client.listen && typeof client.listen === 'object') {
+                        console.log('Listen methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(client.listen)));
+                    }
+                }
+                
+                const details = `Has listen: ${hasListenProperty}\nHas manage: ${hasManageProperty}`;
+                updateStep('step3', 'SUCCESS - Basic structure verified', true, details);
+                
+                console.log('🎉 All Step 1 tests passed!');
+                console.log('✅ Ready to proceed to Step 2: Microphone Test');
+                
+            } catch (error) {
+                console.error('❌ Step 1.2 failed:', error);
+                updateStep('step2', `FAILED - ${error.message}`, false);
+            }
+        }
+        
+        // Run tests when page loads
+        window.addEventListener('load', () => {
+            console.log('🚀 Page loaded, starting tests in 1 second...');
+            setTimeout(runTests, 1000);
+        });
+        
+        // Handle script load errors
+        window.addEventListener('error', (event) => {
+            console.error('❌ Script error:', event.error);
+            updateStep('step1', 'FAILED - Script load error', false);
+        });
+    </script>
+</body>
+</html>

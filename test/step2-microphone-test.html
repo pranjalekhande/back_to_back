@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Step 2: Microphone Access Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .step { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .waiting { background: #fff3cd; border-color: #ffeaa7; }
+        .code { background: #f8f9fa; padding: 10px; border-radius: 3px; font-family: monospace; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .audio-level { width: 100%; height: 20px; background: #eee; border-radius: 10px; overflow: hidden; }
+        .audio-level-bar { height: 100%; background: linear-gradient(90deg, #28a745, #ffc107, #dc3545); transition: width 0.1s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Step 2: Microphone Access Test</h1>
+        <p>This test verifies microphone access and audio capture functionality.</p>
+        
+        <div id="step1" class="step waiting">
+            <h3>Step 2.1: Check Browser Support</h3>
+            <p>Status: <span id="step1-status">Checking...</span></p>
+            <div id="step1-details" class="code" style="display: none;"></div>
+        </div>
+        
+        <div id="step2" class="step waiting">
+            <h3>Step 2.2: Request Microphone Access</h3>
+            <p>Status: <span id="step2-status">Waiting...</span></p>
+            <button id="request-mic-btn" onclick="requestMicrophone()">Request Microphone Access</button>
+        </div>
+        
+        <div id="step3" class="step waiting">
+            <h3>Step 2.3: Test Audio Recording</h3>
+            <p>Status: <span id="step3-status">Waiting...</span></p>
+            <button id="start-recording-btn" onclick="startRecording()" disabled>Start Recording</button>
+            <button id="stop-recording-btn" onclick="stopRecording()" disabled>Stop Recording</button>
+            <div id="audio-level-container" style="display: none; margin-top: 10px;">
+                <p>Audio Level:</p>
+                <div class="audio-level">
+                    <div id="audio-level-bar" class="audio-level-bar" style="width: 0%;"></div>
+                </div>
+            </div>
+            <div id="recording-stats" class="code" style="display: none; margin-top: 10px;"></div>
+        </div>
+        
+        <div id="console-output" class="step">
+            <h3>Console Output:</h3>
+            <div id="console-log" class="code" style="min-height: 200px; white-space: pre-wrap; overflow-y: auto;"></div>
+        </div>
+        
+        <div class="step">
+            <h3>Next Steps:</h3>
+            <p>If all tests pass, proceed to <a href="step3-deepgram-connection-test.html">Step 3: Deepgram Connection Test</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let audioStream = null;
+        let mediaRecorder = null;
+        let isRecording = false;
+        let audioChunks = [];
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let animationFrame = null;
+        
+        // Console capture
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const consoleOutput = document.getElementById('console-log');
+        
+        function logToPage(type, ...args) {
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            consoleOutput.textContent += `[${timestamp}] ${type.toUpperCase()}: ${args.join(' ')}\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = (...args) => {
+            originalLog(...args);
+            logToPage('log', ...args);
+        };
+        
+        console.error = (...args) => {
+            originalError(...args);
+            logToPage('error', ...args);
+        };
+        
+        console.warn = (...args) => {
+            originalWarn(...args);
+            logToPage('warn', ...args);
+        };
+        
+        // Helper functions
+        function updateStep(stepId, status, success, details = '') {
+            const step = document.getElementById(stepId);
+            const statusSpan = document.getElementById(`${stepId}-status`);
+            const detailsDiv = document.getElementById(`${stepId}-details`);
+            
+            statusSpan.textContent = status;
+            step.className = `step ${success ? 'success' : success === false ? 'error' : 'waiting'}`;
+            
+            if (details && detailsDiv) {
+                detailsDiv.textContent = details;
+                detailsDiv.style.display = 'block';
+            }
+        }
+        
+        // Step 2.1: Check browser support
+        function checkBrowserSupport() {
+            console.log('🔍 Step 2.1: Checking browser support...');
+            
+            const checks = {
+                'navigator.mediaDevices': !!navigator.mediaDevices,
+                'getUserMedia': !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+                'MediaRecorder': !!window.MediaRecorder,
+                'AudioContext': !!(window.AudioContext || window.webkitAudioContext)
+            };
+            
+            console.log('Browser support checks:', checks);
+            
+            const allSupported = Object.values(checks).every(Boolean);
+            const details = Object.entries(checks)
+                .map(([key, value]) => `${key}: ${value ? '✅' : '❌'}`)
+                .join('\n');
+            
+            if (allSupported) {
+                updateStep('step1', 'SUCCESS - All features supported', true, details);
+                console.log('✅ All required browser features are supported');
+            } else {
+                updateStep('step1', 'FAILED - Missing browser features', false, details);
+                console.error('❌ Some required browser features are not supported');
+            }
+            
+            return allSupported;
+        }
+        
+        // Step 2.2: Request microphone access
+        async function requestMicrophone() {
+            console.log('🎤 Step 2.2: Requesting microphone access...');
+            updateStep('step2', 'Requesting permission...', null);
+            
+            try {
+                const constraints = {
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                };
+                
+                console.log('Using constraints:', constraints);
+                audioStream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                const audioTracks = audioStream.getAudioTracks();
+                console.log('✅ Microphone access granted');
+                console.log(`Got ${audioTracks.length} audio tracks`);
+                
+                if (audioTracks.length > 0) {
+                    const track = audioTracks[0];
+                    console.log('Track settings:', track.getSettings());
+                    console.log('Track capabilities:', track.getCapabilities());
+                }
+                
+                updateStep('step2', 'SUCCESS - Microphone access granted', true);
+                
+                // Enable recording test
+                document.getElementById('start-recording-btn').disabled = false;
+                
+                // Setup audio context for level monitoring
+                setupAudioAnalysis();
+                
+            } catch (error) {
+                console.error('❌ Failed to access microphone:', error);
+                updateStep('step2', `FAILED - ${error.message}`, false);
+            }
+        }
+        
+        // Setup audio analysis for level monitoring
+        function setupAudioAnalysis() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(audioStream);
+                
+                analyser.smoothingTimeConstant = 0.8;
+                analyser.fftSize = 1024;
+                
+                microphone.connect(analyser);
+                
+                console.log('✅ Audio analysis setup complete');
+            } catch (error) {
+                console.error('❌ Failed to setup audio analysis:', error);
+            }
+        }
+        
+        // Monitor audio level
+        function updateAudioLevel() {
+            if (!analyser) return;
+            
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+            
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += dataArray[i];
+            }
+            
+            const level = sum / dataArray.length / 255;
+            const percentage = Math.round(level * 100);
+            
+            const levelBar = document.getElementById('audio-level-bar');
+            if (levelBar) {
+                levelBar.style.width = `${percentage}%`;
+            }
+            
+            if (isRecording) {
+                animationFrame = requestAnimationFrame(updateAudioLevel);
+            }
+        }
+        
+        // Step 2.3: Test recording
+        function startRecording() {
+            console.log('🎤 Step 2.3: Starting audio recording test...');
+            
+            if (!audioStream) {
+                console.error('❌ No audio stream available');
+                return;
+            }
+            
+            try {
+                // Check supported MIME types
+                const supportedTypes = [
+                    'audio/webm;codecs=opus',
+                    'audio/webm',
+                    'audio/mp4',
+                    'audio/ogg;codecs=opus'
+                ];
+                
+                let selectedMimeType = null;
+                for (const type of supportedTypes) {
+                    if (MediaRecorder.isTypeSupported(type)) {
+                        selectedMimeType = type;
+                        console.log(`✅ Using MIME type: ${type}`);
+                        break;
+                    }
+                }
+                
+                if (!selectedMimeType) {
+                    selectedMimeType = 'audio/webm';
+                    console.warn('⚠️ No supported MIME types found, using default');
+                }
+                
+                mediaRecorder = new MediaRecorder(audioStream, {
+                    mimeType: selectedMimeType,
+                    audioBitsPerSecond: 16000
+                });
+                
+                let chunkCount = 0;
+                let totalSize = 0;
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        chunkCount++;
+                        totalSize += event.data.size;
+                        audioChunks.push(event.data);
+                        
+                        console.log(`Audio chunk #${chunkCount}: ${event.data.size} bytes`);
+                        
+                        const stats = document.getElementById('recording-stats');
+                        if (stats) {
+                            stats.textContent = `Chunks: ${chunkCount}\nTotal size: ${(totalSize / 1024).toFixed(2)} KB\nLast chunk: ${event.data.size} bytes`;
+                        }
+                    }
+                };
+                
+                mediaRecorder.onstart = () => {
+                    console.log('✅ Recording started');
+                    isRecording = true;
+                    updateStep('step3', 'RECORDING - Capturing audio...', null);
+                    
+                    document.getElementById('start-recording-btn').disabled = true;
+                    document.getElementById('stop-recording-btn').disabled = false;
+                    document.getElementById('audio-level-container').style.display = 'block';
+                    document.getElementById('recording-stats').style.display = 'block';
+                    
+                    updateAudioLevel();
+                };
+                
+                mediaRecorder.onstop = () => {
+                    console.log('🛑 Recording stopped');
+                    isRecording = false;
+                    
+                    if (animationFrame) {
+                        cancelAnimationFrame(animationFrame);
+                    }
+                    
+                    const totalChunks = audioChunks.length;
+                    const totalBytes = audioChunks.reduce((sum, chunk) => sum + chunk.size, 0);
+                    
+                    console.log(`Final stats: ${totalChunks} chunks, ${(totalBytes / 1024).toFixed(2)} KB total`);
+                    
+                    if (totalChunks > 0 && totalBytes > 0) {
+                        updateStep('step3', 'SUCCESS - Audio recording works', true);
+                        console.log('🎉 Audio recording test passed!');
+                        console.log('✅ Ready to proceed to Step 3: Deepgram Connection Test');
+                    } else {
+                        updateStep('step3', 'FAILED - No audio data captured', false);
+                        console.error('❌ No audio data was captured');
+                    }
+                    
+                    document.getElementById('start-recording-btn').disabled = false;
+                    document.getElementById('stop-recording-btn').disabled = true;
+                };
+                
+                mediaRecorder.onerror = (error) => {
+                    console.error('❌ MediaRecorder error:', error);
+                    updateStep('step3', 'FAILED - Recording error', false);
+                    isRecording = false;
+                };
+                
+                // Start recording with 250ms chunks
+                mediaRecorder.start(250);
+                audioChunks = [];
+                
+            } catch (error) {
+                console.error('❌ Failed to start recording:', error);
+                updateStep('step3', `FAILED - ${error.message}`, false);
+            }
+        }
+        
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+            }
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            console.log('🚀 Step 2 test page loaded');
+            setTimeout(checkBrowserSupport, 500);
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+        });
+    </script>
+</body>
+</html>

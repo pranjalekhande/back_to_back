@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Speech-to-Text Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .transcript { 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            height: 200px; 
+            overflow-y: auto; 
+            background: #f9f9f9;
+        }
+        .controls { margin: 20px 0; }
+        button { padding: 10px 20px; margin: 5px; }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 4px;
+            background: #e3f2fd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Simple Speech-to-Text Test</h1>
+        
+        <div class="controls">
+            <button id="startBtn">Start Listening</button>
+            <button id="stopBtn" disabled>Stop Listening</button>
+            <button id="clearBtn">Clear</button>
+        </div>
+        
+        <div id="status" class="status">Ready to start</div>
+        
+        <h3>Live Transcript:</h3>
+        <div id="transcript" class="transcript"></div>
+        
+        <h3>Final Results:</h3>
+        <div id="finalResults" class="transcript"></div>
+    </div>
+
+    <!-- Load Deepgram SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@deepgram/sdk"></script>
+    
+    <script>
+        let isListening = false;
+        let mediaRecorder = null;
+        let audioStream = null;
+        let deepgramSocket = null;
+        
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const status = document.getElementById('status');
+        const transcript = document.getElementById('transcript');
+        const finalResults = document.getElementById('finalResults');
+        
+        function updateStatus(message) {
+            status.textContent = message;
+            console.log(message);
+        }
+        
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                return config.deepgramApiKey;
+            } catch (error) {
+                console.error('Failed to load config:', error);
+                return null;
+            }
+        }
+        
+        async function startListening() {
+            try {
+                updateStatus('Getting API key...');
+                const apiKey = await loadConfig();
+                
+                if (!apiKey) {
+                    updateStatus('Error: No API key found');
+                    return;
+                }
+                
+                updateStatus('Requesting microphone access...');
+                audioStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+                
+                updateStatus('Connecting to Deepgram...');
+                const { createClient } = window.deepgram;
+                const client = createClient(apiKey);
+                
+                deepgramSocket = client.listen.live({
+                    model: 'nova-2',
+                    language: 'en-US',
+                    smart_format: true,
+                    interim_results: true
+                });
+                
+                deepgramSocket.on('open', () => {
+                    updateStatus('✅ Connected! Start speaking...');
+                    isListening = true;
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                });
+                
+                deepgramSocket.on('transcript', (data) => {
+                    const result = data.channel.alternatives[0].transcript;
+                    
+                    if (result && result.trim()) {
+                        if (data.is_final) {
+                            // Show final result
+                            const div = document.createElement('div');
+                            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${result}`;
+                            finalResults.appendChild(div);
+                            finalResults.scrollTop = finalResults.scrollHeight;
+                            transcript.innerHTML = '';
+                            
+                            // 🎯 SEND TO AI AGENTS HERE
+                            sendToAIAgents(result);
+                        } else {
+                            // Show live transcript
+                            transcript.innerHTML = `<em>${result}</em>`;
+                        }
+                    }
+                });
+                
+                deepgramSocket.on('error', (error) => {
+                    console.error('Deepgram error:', error);
+                    updateStatus('❌ Deepgram error: ' + error.message);
+                });
+                
+                deepgramSocket.on('close', () => {
+                    updateStatus('Connection closed');
+                    isListening = false;
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                });
+                
+                // Start recording and streaming
+                mediaRecorder = new MediaRecorder(audioStream, {
+                    mimeType: 'audio/webm;codecs=opus',
+                    audioBitsPerSecond: 16000
+                });
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && deepgramSocket) {
+                        console.log('📤 Sending audio:', event.data.size, 'bytes');
+                        deepgramSocket.send(event.data);
+                    }
+                };
+                
+                mediaRecorder.start(250); // 250ms chunks
+                
+            } catch (error) {
+                console.error('Error:', error);
+                updateStatus('❌ Error: ' + error.message);
+            }
+        }
+        
+        function stopListening() {
+            if (mediaRecorder) {
+                mediaRecorder.stop();
+            }
+            
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+            
+            if (deepgramSocket) {
+                deepgramSocket.requestClose();
+            }
+            
+            updateStatus('Stopped');
+            isListening = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        }
+        
+        function clearTranscripts() {
+            transcript.innerHTML = '';
+            finalResults.innerHTML = '';
+        }
+        
+        // 🎯 SEND TO AI AGENTS
+        function sendToAIAgents(userText) {
+            console.log('🤖 Sending to AI agents:', userText);
+            
+            // This is where you'll call your AI dialogue API
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    userInput: userText,
+                    timestamp: new Date().toISOString()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('🎭 AI Response:', data);
+                // Handle AI agent responses here
+            })
+            .catch(error => {
+                console.error('❌ AI API error:', error);
+            });
+        }
+        
+        // Event listeners
+        startBtn.addEventListener('click', startListening);
+        stopBtn.addEventListener('click', stopListening);
+        clearBtn.addEventListener('click', clearTranscripts);
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (isListening) {
+                stopListening();
+            }
+        });
+        
+        // Check if Deepgram SDK loaded
+        window.addEventListener('load', () => {
+            if (!window.deepgram) {
+                updateStatus('❌ Error: Deepgram SDK not loaded');
+            } else {
+                updateStatus('Ready to start');
+            }
+        });
+    </script>
+</body>
+</html>

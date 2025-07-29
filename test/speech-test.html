@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speech-to-Text Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .transcript { 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            height: 200px; 
+            overflow-y: auto; 
+            background: #f9f9f9;
+        }
+        .controls { margin: 20px 0; }
+        button { padding: 10px 20px; margin: 5px; }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 4px;
+        }
+        .active { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .api-key-input { 
+            width: 100%; 
+            padding: 8px; 
+            margin: 10px 0; 
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Speech-to-Text Test</h1>
+        
+        <div>
+            <label for="apiKey">DeepGram API Key:</label>
+            <input type="password" id="apiKey" class="api-key-input" placeholder="Loading from environment..." readonly>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">Start Listening</button>
+            <button id="stopBtn" disabled>Stop Listening</button>
+            <button id="clearBtn">Clear Transcript</button>
+        </div>
+        
+        <div id="status" class="status">Loading configuration...</div>
+        
+        <h3>Live Transcript:</h3>
+        <div id="transcript" class="transcript"></div>
+        
+        <h3>Final Results:</h3>
+        <div id="finalResults" class="transcript"></div>
+    </div>
+
+    <!-- Load Deepgram SDK from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@deepgram/sdk"></script>
+    
+    <!-- Load our services -->
+    <script src="../src/services/speech/microphone.js"></script>
+    <script src="../src/services/speech/deepgram.js"></script>
+    <script src="../src/services/speech/speechToText.js"></script>
+    
+    <script>
+        
+        let speechService = null;
+        let apiKey = '';
+        
+        // DOM elements
+        const apiKeyInput = document.getElementById('apiKey');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const status = document.getElementById('status');
+        const transcript = document.getElementById('transcript');
+        const finalResults = document.getElementById('finalResults');
+        
+        function updateStatus(message, type = '') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        function setupCallbacks() {
+            speechService.setCallbacks({
+                onTranscript: (result) => {
+                    if (!result.isFinal) {
+                        transcript.innerHTML = `<em>${result.text}</em>`;
+                    }
+                },
+                
+                onFinalTranscript: (result) => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <strong>[${new Date(result.timestamp).toLocaleTimeString()}]</strong> ${result.text}
+                        <small>(confidence: ${(result.confidence * 100).toFixed(1)}%)</small>
+                    `;
+                    finalResults.appendChild(div);
+                    finalResults.scrollTop = finalResults.scrollHeight;
+                    transcript.innerHTML = '';
+                },
+                
+                onError: (error) => {
+                    updateStatus(`Error: ${error.message}`, 'error');
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                },
+                
+                onStatusChange: (statusType) => {
+                    updateStatus(`Status: ${statusType}`, statusType === 'active' ? 'active' : '');
+                }
+            });
+        }
+        
+        // Load configuration on page load
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                
+                if (config.deepgramApiKey) {
+                    apiKey = config.deepgramApiKey;
+                    apiKeyInput.value = '●●●●●●●●●●●●●●●●';
+                    updateStatus('Ready to start listening');
+                    startBtn.disabled = false;
+                } else {
+                    updateStatus('No API key found in environment', 'error');
+                    apiKeyInput.placeholder = 'No API key in .env file';
+                }
+            } catch (error) {
+                updateStatus('Failed to load configuration', 'error');
+                console.error('Config load error:', error);
+            }
+        }
+        
+        // Load config when page loads
+        loadConfig();
+        
+        // Event listeners
+        startBtn.addEventListener('click', async () => {
+            if (!apiKey) {
+                alert('No API key available. Check your .env file.');
+                return;
+            }
+            
+            try {
+                // Initialize service with API key
+                speechService = new SpeechToTextService(apiKey);
+                setupCallbacks();
+                
+                updateStatus('Starting speech recognition...');
+                await speechService.start();
+                
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                
+            } catch (error) {
+                updateStatus(`Failed to start: ${error.message}`, 'error');
+                console.error('Start error:', error);
+            }
+        });
+        
+        stopBtn.addEventListener('click', () => {
+            if (speechService) {
+                speechService.stop();
+            }
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStatus('Stopped');
+        });
+        
+        clearBtn.addEventListener('click', () => {
+            transcript.innerHTML = '';
+            finalResults.innerHTML = '';
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (speechService) {
+                speechService.cleanup();
+            }
+        });
+    </script>
+</body>
+</html>
