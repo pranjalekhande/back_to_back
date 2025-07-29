@@ -1,0 +1,119 @@
+:root {
+  /* Face sizing controls */
+  --head-size: 300px;
+  --mouth-size: 295px;
+  
+  /* Positioning controls */
+  --mouth-vertical-offset: 82px;
+  
+  /* Responsive scaling factors */
+  --tablet-scale: 0.83; /* 250px/300px for head */
+  --mobile-scale: 0.67;  /* 200px/300px for head */
+}
+
+.App {
+  min-height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.faces-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 200px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  padding-top: 100px;
+}
+
+.face-column {
+  position: relative;
+  width: var(--head-size);
+  height: 400px;
+}
+
+.head-image, .mouth-image {
+  position: absolute;
+  max-width: 100%;
+  height: auto;
+}
+
+.head-image {
+  max-width: var(--head-size);
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.mouth-image {
+  max-width: var(--mouth-size);
+  top: var(--mouth-vertical-offset);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+/* Move first mouth (mouth-1) to the left by 1px */
+.face-column:nth-child(1) .mouth-image {
+  left: calc(50% - 1px);
+}
+
+/* Move second mouth (mouth-2) to the right by 3px */
+.face-column:nth-child(2) .mouth-image {
+  left: calc(50% + 2px);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .faces-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 100px;
+    padding-top: 50px;
+  }
+  
+  .face-column {
+    width: calc(var(--head-size) * var(--tablet-scale));
+    height: 350px;
+  }
+  
+  .head-image {
+    max-width: calc(var(--head-size) * var(--tablet-scale));
+    top: 60px;
+  }
+  
+  .mouth-image {
+    max-width: calc(var(--mouth-size) * var(--tablet-scale));
+    top: calc(var(--mouth-vertical-offset) * var(--tablet-scale));
+  }
+}
+
+@media (max-width: 480px) {
+  .App {
+    padding: 10px;
+  }
+  
+  .faces-container {
+    padding: 10px;
+    gap: 80px;
+    padding-top: 30px;
+  }
+  
+  .face-column {
+    width: calc(var(--head-size) * var(--mobile-scale));
+    height: 300px;
+  }
+  
+  .head-image {
+    max-width: calc(var(--head-size) * var(--mobile-scale));
+    top: 50px;
+  }
+  
+  .mouth-image {
+    max-width: calc(var(--mouth-size) * var(--mobile-scale));
+    top: calc(var(--mouth-vertical-offset) * var(--mobile-scale));
+  }
+}
