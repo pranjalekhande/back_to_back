@@ -45,17 +45,26 @@ Github plot
 
 ```mermaid
 flowchart TD
-    FE[Frontend (Web UI)] --> API[FastAPI Backend (WebSocket Handler)]
-    API --> PIPE[Pipecat-Flows Pipeline]
-    PIPE --> AG1[Agent A Node]
-    PIPE --> AG2[Agent B Node]
-    AG1 --> LLM1[LLM Call]
-    AG2 --> LLM2[LLM Call]
-    AG1 --> TTS1[TTS Synthesis]
-    AG2 --> TTS2[TTS Synthesis]
+    FE --> API
+    API --> PIPE
+    PIPE --> AG1
+    PIPE --> AG2
+    AG1 --> LLM1
+    AG2 --> LLM2
+    AG1 --> TTS1
+    AG2 --> TTS2
     TTS1 --> API
     TTS2 --> API
     API --> FE
+    %% 
+    %% Legend:
+    %% FE: "Frontend"
+    %% API: "FastAPI Backend"
+    %% PIPE: "Pipecat-Flows Pipeline"
+    %% AG1: "Agent A Node"
+    %% AG2: "Agent B Node"
+    %% LLM1/LLM2: "LLM Call"
+    %% TTS1/TTS2: "TTS Synthesis"
 ```
 
 Non-github plot
