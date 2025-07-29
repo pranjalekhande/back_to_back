@@ -1,5 +1,5 @@
 {
-  name = "template";
+  name = "back-to-back";
   directory = ./.;
   #workspaces = [];
 }

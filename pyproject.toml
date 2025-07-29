@@ -1,5 +1,5 @@
 [project]
-name = "template"
+name = "back-to-back"
 version = "0.0.0"
 description = "Add your description here"
 readme = "README.md"
@@ -31,7 +31,7 @@ dev = [
 ]
 
 [project.scripts]
-template = "template.main:main"
+back-to-back = "back_to_back.main:main"
 
 [build-system]
 requires = ["hatchling", "editables"]
@@ -75,13 +75,13 @@ python_files = ["test_*.py", "*_test.py"]
 addopts = [
     "-ra",
     "--strict-markers",
-    "--cov=template",
+    "--cov=back_to_back",
     "--cov-report=term-missing",
     "--cov-report=html",
 ]
 
 [tool.coverage.run]
-source = ["src/template"]
+source = ["src/back_to_back"]
 omit = ["*/__main__.py"]
 
 [tool.coverage.report]
@@ -93,4 +93,4 @@ exclude_lines = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/template"]
+packages = ["src/back_to_back"]

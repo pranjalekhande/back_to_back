@@ -1,5 +1,5 @@
 {
-  "name": "template",
+  "name": "back-to-back",
   "private": true,
   "dependencies": {
     "@anthropic-ai/claude-code": "1.0.61",
