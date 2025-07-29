@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Back-to-Back Agent Chat Test</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .container {
+            background-color: #2d2d2d;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #66d9ef;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #3a3a3a;
+            color: #ffffff;
+        }
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        button {
+            background-color: #66d9ef;
+            color: #1a1a1a;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #5ac3e3;
+        }
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .status.connected {
+            background-color: #2d5a2d;
+            border: 1px solid #4caf50;
+        }
+        .status.disconnected {
+            background-color: #5a2d2d;
+            border: 1px solid #f44336;
+        }
+        .conversation {
+            background-color: #1e1e1e;
+            border-radius: 5px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 5px;
+        }
+        .agent-alpha {
+            background-color: #2d3a5a;
+            border-left: 4px solid #66d9ef;
+        }
+        .agent-beta {
+            background-color: #5a2d3a;
+            border-left: 4px solid #f92672;
+        }
+        .system {
+            background-color: #3a3a2d;
+            border-left: 4px solid #e6db74;
+            color: #e6db74;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎭 Back-to-Back Agent Chat Test</h1>
+    
+    <div class="container">
+        <h2>Agent Configuration</h2>
+        
+        <div class="form-group">
+            <label for="agent1">Agent 1 Persona:</label>
+            <textarea id="agent1" placeholder="Describe the first AI agent's personality...">A charming vampire from the 18th century who loves poetry and classical music</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="agent2">Agent 2 Persona:</label>
+            <textarea id="agent2" placeholder="Describe the second AI agent's personality...">A modern tech startup founder who's obsessed with efficiency and productivity</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="scenario">Scenario:</label>
+            <select id="scenario">
+                <option value="flirt">Flirt</option>
+                <option value="roast">Roast</option>
+                <option value="debate">Debate</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="maxTurns">Max Turns:</label>
+            <input type="number" id="maxTurns" value="6" min="2" max="20">
+        </div>
+        
+        <button id="connectBtn" onclick="connect()">🔗 Start Conversation</button>
+        <button id="disconnectBtn" onclick="disconnect()" disabled>🔌 Stop Conversation</button>
+    </div>
+    
+    <div class="container">
+        <div id="status" class="status disconnected">
+            ❌ Disconnected
+        </div>
+        
+        <h3>Conversation:</h3>
+        <div id="conversation" class="conversation">
+            <div class="system">Ready to start conversation...</div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+
+        function connect() {
+            const agent1 = document.getElementById('agent1').value;
+            const agent2 = document.getElementById('agent2').value;
+            const scenario = document.getElementById('scenario').value;
+            const maxTurns = document.getElementById('maxTurns').value;
+            
+            if (!agent1.trim() || !agent2.trim()) {
+                alert('Please fill in both agent personas');
+                return;
+            }
+            
+            const params = new URLSearchParams({
+                agent_1_persona: agent1,
+                agent_2_persona: agent2,
+                scenario: scenario,
+                max_turns: maxTurns
+            });
+            
+            const wsUrl = `ws://localhost:8000/ws?${params}`;
+            
+            try {
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = function(event) {
+                    updateStatus('connected', '✅ Connected - Conversation starting...');
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                    clearConversation();
+                };
+                
+                ws.onmessage = function(event) {
+                    displayMessage(event.data);
+                };
+                
+                ws.onclose = function(event) {
+                    updateStatus('disconnected', '❌ Disconnected');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                };
+                
+                ws.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    updateStatus('disconnected', '❌ Connection Error');
+                };
+                
+            } catch (error) {
+                console.error('Failed to connect:', error);
+                alert('Failed to connect to WebSocket');
+            }
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+        
+        function updateStatus(type, message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+        
+        function displayMessage(message) {
+            const conversation = document.getElementById('conversation');
+            const messageDiv = document.createElement('div');
+            
+            // Determine message type for styling
+            let className = 'message system';
+            if (message.includes('**Agent Alpha:**')) {
+                className = 'message agent-alpha';
+                message = message.replace('**Agent Alpha:**', 'Agent Alpha:');
+            } else if (message.includes('**Agent Beta:**')) {
+                className = 'message agent-beta';
+                message = message.replace('**Agent Beta:**', 'Agent Beta:');
+            }
+            
+            messageDiv.className = className;
+            messageDiv.textContent = message;
+            
+            conversation.appendChild(messageDiv);
+            conversation.scrollTop = conversation.scrollHeight;
+        }
+        
+        function clearConversation() {
+            const conversation = document.getElementById('conversation');
+            conversation.innerHTML = '<div class="system">Conversation started...</div>';
+        }
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', function() {
+            if (ws) {
+                ws.close();
+            }
+        });
+    </script>
+</body>
+</html>
