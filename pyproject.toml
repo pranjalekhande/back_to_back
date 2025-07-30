@@ -10,7 +10,7 @@ authors = [
 maintainers = [
     { name = "Your Name", email = "your.name@example.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -29,6 +29,8 @@ dependencies = [
     "redis>=6.2.0",
     "uvicorn>=0.35.0",
     "websockets>=12.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
 ]
 
 [project.optional-dependencies]
