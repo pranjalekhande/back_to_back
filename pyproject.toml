@@ -10,7 +10,7 @@ authors = [
 maintainers = [
     { name = "Your Name", email = "your.name@example.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -20,7 +20,12 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Typing :: Typed",
 ]
-dependencies = []
+dependencies = [
+    "pipecat-ai",
+    "python-dotenv>=1.0.0",
+    "openai>=1.0.0",
+    "requests>=2.31.0",
+]
 
 [project.optional-dependencies]
 dev = [
