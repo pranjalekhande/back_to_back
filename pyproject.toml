@@ -10,12 +10,14 @@ authors = [
 maintainers = [
     { name = "Your Name", email = "your.name@example.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3 :: Only",
     "Typing :: Typed",
@@ -24,7 +26,7 @@ dependencies = [
     "fastapi>=0.116.1",
     "httpx>=0.28.1",
     "openai>=1.27.0",
-    "pipecat-ai[openai,deepgram,flows]==0.0.76",
+    "pipecat-ai[openai,deepgram]==0.0.76",
     "pydantic>=2.10.6,<2.11.dev0",
     "redis>=6.2.0",
     "uvicorn>=0.35.0",
@@ -36,7 +38,7 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "mypy>=1.0",
-    "ruff>=0.1",
+    "ruff>=0.1,!=0.12.6",
 ]
 
 [project.scripts]
@@ -47,7 +49,7 @@ requires = ["hatchling", "editables"]
 build-backend = "hatchling.build"
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py311"
 line-length = 100
 extend-include = ["*.pyi"]
 
@@ -68,7 +70,7 @@ select = [
 ignore = ["PLR0913"]  # Too many arguments
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
