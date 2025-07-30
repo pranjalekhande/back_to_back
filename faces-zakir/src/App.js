@@ -8,6 +8,10 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioInitialized, setAudioInitialized] = useState(false);
   
+  // State for head floating positions
+  const [head1Position, setHead1Position] = useState({ x: 0, y: 0 });
+  const [head2Position, setHead2Position] = useState({ x: 0, y: 0 });
+  
   // Audio analysis refs
   const audioRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -22,6 +26,10 @@ function App() {
   
   // Add state for debugging audio levels
   const [currentAudioLevel, setCurrentAudioLevel] = useState(0);
+  
+  // Floating animation configuration
+  const FLOAT_RADIUS = 20; // Maximum pixels to float from center
+  const FLOAT_SPEED = 6000; // Animation duration in milliseconds
 
   // Audio setup function (called after user interaction)
   const setupAudio = async () => {
@@ -167,7 +175,52 @@ function App() {
       }
   };
 
-     // Cleanup function
+     // Continuous floating animation for heads
+   useEffect(() => {
+     let animationId;
+     const startTime = Date.now();
+     
+     // Different frequencies and phases for each head to create unique movement patterns
+     const head1Config = {
+       xFreq: 0.0008,  // How fast it moves horizontally
+       yFreq: 0.0012,  // How fast it moves vertically
+       xPhase: 0,      // Starting phase offset
+       yPhase: Math.PI / 4
+     };
+     
+     const head2Config = {
+       xFreq: 0.0010,
+       yFreq: 0.0009,
+       xPhase: Math.PI / 2,
+       yPhase: Math.PI
+     };
+
+     const animate = () => {
+       const elapsed = Date.now() - startTime;
+       
+       // Calculate smooth floating positions using sine waves
+       const head1X = Math.sin(elapsed * head1Config.xFreq + head1Config.xPhase) * FLOAT_RADIUS;
+       const head1Y = Math.cos(elapsed * head1Config.yFreq + head1Config.yPhase) * FLOAT_RADIUS;
+       
+       const head2X = Math.sin(elapsed * head2Config.xFreq + head2Config.xPhase) * FLOAT_RADIUS;
+       const head2Y = Math.cos(elapsed * head2Config.yFreq + head2Config.yPhase) * FLOAT_RADIUS;
+       
+       setHead1Position({ x: head1X, y: head1Y });
+       setHead2Position({ x: head2X, y: head2Y });
+       
+       animationId = requestAnimationFrame(animate);
+     };
+
+     animate();
+
+     return () => {
+       if (animationId) {
+         cancelAnimationFrame(animationId);
+       }
+     };
+   }, []);
+
+   // Cleanup function
    useEffect(() => {
      return () => {
        if (animationIdRef.current) {
@@ -189,8 +242,29 @@ function App() {
     transition: 'transform 0.1s ease-out' // Faster transition for audio responsiveness
   });
 
+  // Helper function for face-pair floating animation (affects both head and mouth)
+  const getFacePairStyle = (position) => ({
+    transform: `translateX(${position.x}px) translateY(${position.y}px)`
+    // No CSS transition - using requestAnimationFrame for smooth continuous movement
+  });
+
   return (
     <div className="App">
+      {/* Matrix-style animated grid background */}
+      <div className="grid-container">
+        <div className="plane">
+          <div className="grid"></div>
+          <div className="glow"></div>
+        </div>
+        <div className="plane">
+          <div className="grid"></div>
+          <div className="glow"></div>
+        </div>
+      </div>
+
+      {/* Matrix-style title */}
+      <h1>Amp vs Claude Code: Roast Battle 😈</h1>
+
       {/* Play button in top right */}
       <button 
         onClick={handlePlayToggle}
@@ -200,23 +274,25 @@ function App() {
           right: '20px',
           width: '90px',
           height: '90px',
-          border: 'none',
-          backgroundColor: 'transparent',
+          border: '2px solid green',
+          backgroundColor: 'rgba(0, 20, 0, 0.8)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 1002,
+          borderRadius: '10px',
+          filter: 'drop-shadow(0px 0px 10px rgba(0, 255, 0, 0.5))'
         }}
         title={isPlaying ? 'Stop Audio' : 'Play Audio'}
       >
         {isPlaying ? (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="#333">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="green">
             <rect x="6" y="4" width="4" height="16" />
             <rect x="14" y="4" width="4" height="16" />
           </svg>
         ) : (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="#333">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="green">
             <polygon points="8,5 19,12 8,19" />
           </svg>
         )}
@@ -224,28 +300,51 @@ function App() {
 
       <div className="faces-container">
         <div className="face-column">
-          <img src="/head-1.png" className="head-image" alt="Head 1" />
-          <img 
-            src="/mouth-1.png" 
-            className="mouth-image" 
-            alt="Mouth 1"
-            id="mouth-1"
-            style={getMouthStyle(mouth1Y)}
-          />
+          <div className="face-pair face-pair-1" style={getFacePairStyle(head1Position)}>
+            <img 
+              src="/head-1.png" 
+              className="head-image" 
+              alt="Head 1"
+            />
+            <img 
+              src="/mouth-1.png" 
+              className="mouth-image" 
+              alt="Mouth 1"
+              id="mouth-1"
+              style={getMouthStyle(mouth1Y)}
+            />
+          </div>
         </div>
         <div className="face-column">
-          <img src="/head-2.png" className="head-image" alt="Head 2" />
-          <img 
-            src="/mouth-2.png" 
-            className="mouth-image" 
-            alt="Mouth 2"
-            style={getMouthStyle(mouth2Y)}
-          />
+          <div className="face-pair face-pair-2" style={getFacePairStyle(head2Position)}>
+            <img 
+              src="/head-2.png" 
+              className="head-image" 
+              alt="Head 2"
+            />
+            <img 
+              src="/mouth-2.png" 
+              className="mouth-image" 
+              alt="Mouth 2"
+              style={getMouthStyle(mouth2Y)}
+            />
+          </div>
         </div>
       </div>
       
       {/* Audio controls (optional - for debugging) */}
-      <div style={{position: 'fixed', bottom: '20px', left: '20px', fontSize: '12px', color: '#666', backgroundColor: 'rgba(255,255,255,0.8)', padding: '10px', borderRadius: '5px'}}>
+      <div style={{
+        position: 'fixed', 
+        bottom: '20px', 
+        left: '20px', 
+        fontSize: '12px', 
+        color: 'green', 
+        backgroundColor: 'rgba(0, 20, 0, 0.9)', 
+        padding: '10px', 
+        borderRadius: '5px',
+        border: '1px solid green',
+        filter: 'drop-shadow(0px 0px 5px rgba(0, 255, 0, 0.3))'
+      }}>
         Audio status: {isPlaying ? 'Playing' : 'Stopped'}
         <br />
         Current level: {currentAudioLevel} | Threshold: {AUDIO_THRESHOLD}
