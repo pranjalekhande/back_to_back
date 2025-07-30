@@ -26,7 +26,7 @@ dependencies = [
     "fastapi>=0.116.1",
     "httpx>=0.28.1",
     "openai>=1.27.0",
-    "pipecat-ai[openai,deepgram,flows]==0.0.76",
+    "pipecat-ai[openai,deepgram]==0.0.76",
     "pydantic>=2.10.6,<2.11.dev0",
     "redis>=6.2.0",
     "uvicorn>=0.35.0",
@@ -38,7 +38,7 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "mypy>=1.0",
-    "ruff>=0.1",
+    "ruff>=0.1,!=0.12.6",
 ]
 
 [project.scripts]
