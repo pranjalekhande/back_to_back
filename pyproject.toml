@@ -10,12 +10,14 @@ authors = [
 maintainers = [
     { name = "Your Name", email = "your.name@example.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3 :: Only",
     "Typing :: Typed",
@@ -47,7 +49,7 @@ requires = ["hatchling", "editables"]
 build-backend = "hatchling.build"
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py311"
 line-length = 100
 extend-include = ["*.pyi"]
 
@@ -68,7 +70,7 @@ select = [
 ignore = ["PLR0913"]  # Too many arguments
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
