@@ -41,6 +41,33 @@ Below is updated backend documentation to account for using **pipecat-flows** fo
 
 This shows the system architecture and core data flow with Pipecat-Flows orchestrating both agents from a single backend process:
 
+Github plot
+
+```mermaid
+flowchart TD
+    FE --> API
+    API --> PIPE
+    PIPE --> AG1
+    PIPE --> AG2
+    AG1 --> LLM1
+    AG2 --> LLM2
+    AG1 --> TTS1
+    AG2 --> TTS2
+    TTS1 --> API
+    TTS2 --> API
+    API --> FE
+    %% 
+    %% Legend:
+    %% FE: "Frontend"
+    %% API: "FastAPI Backend"
+    %% PIPE: "Pipecat-Flows Pipeline"
+    %% AG1: "Agent A Node"
+    %% AG2: "Agent B Node"
+    %% LLM1/LLM2: "LLM Call"
+    %% TTS1/TTS2: "TTS Synthesis"
+```
+
+Non-github plot
 ```mermaid
 flowchart TD
     subgraph FE [Frontend (Web UI)]
